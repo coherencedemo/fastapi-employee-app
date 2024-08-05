@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+    volumes:
+      - .:/code
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - CNC_APPLICATION_NAME=${CNC_APPLICATION_NAME}
+      - CNC_ENVIRONMENT_NAME=${CNC_ENVIRONMENT_NAME}
+      - CNC_ENVIRONMENT_DOMAIN=${CNC_ENVIRONMENT_DOMAIN}
+      - CNC_ENVIRONMENT_REGION=${CNC_ENVIRONMENT_REGION}
+      - CNC_INSTANCE_NAME=${CNC_INSTANCE_NAME}
+      - PORT=8080
+      - DATABASE_URL=${DATABASE_URL}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_ENGINE=${DB_ENGINE}
+      - DB_PASSWORD=${DB_PASSWORD}
+
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "${EMPLOYEES_PORT}:5432"
+
+volumes:
+  postgres_data:
