@@ -19,14 +19,15 @@ if not SQLALCHEMY_DATABASE_URL:
     # If DATABASE_URL is not provided, construct it from individual components
     DB_USER = os.getenv("DB_USER")
     DB_PASSWORD = os.getenv("DB_PASSWORD")
-    DB_HOST = os.getenv("EMPLOYEES_HOST") or os.getenv("EMPLOYEES_IP")  # Use EMPLOYEES_HOST or EMPLOYEES_IP
+    DB_HOST = os.getenv("EMPLOYEES_HOST") or os.getenv("EMPLOYEES_IP")
     DB_NAME = os.getenv("DB_NAME")
-    DB_PORT = os.getenv("EMPLOYEES_PORT", "5432")  # Default to 5432 if not provided
+    DB_PORT = os.getenv("EMPLOYEES_PORT", "5432")
 
     # Check if all required components are available
-    if not all([DB_USER, DB_PASSWORD, DB_HOST, DB_NAME]):
-        missing = [var for var in ["DB_USER", "DB_PASSWORD", "EMPLOYEES_HOST/EMPLOYEES_IP", "DB_NAME"] 
-                   if not locals()[var.split('/')[-1]]]
+    required_vars = ["DB_USER", "DB_PASSWORD", "DB_HOST", "DB_NAME"]
+    missing = [var for var in required_vars if not locals()[var]]
+    
+    if missing:
         error_msg = f"Missing required environment variables: {', '.join(missing)}"
         logger.error(error_msg)
         raise ValueError(error_msg)
@@ -34,10 +35,7 @@ if not SQLALCHEMY_DATABASE_URL:
     SQLALCHEMY_DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Log the constructed URL (make sure to mask the password)
-if DB_PASSWORD:
-    masked_url = SQLALCHEMY_DATABASE_URL.replace(DB_PASSWORD, "********")
-else:
-    masked_url = SQLALCHEMY_DATABASE_URL
+masked_url = SQLALCHEMY_DATABASE_URL.replace(DB_PASSWORD, "********") if DB_PASSWORD else SQLALCHEMY_DATABASE_URL
 logger.info(f"Database URL: {masked_url}")
 
 try:
