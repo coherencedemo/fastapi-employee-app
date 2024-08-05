@@ -4,6 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 import logging
+from urllib.parse import urlparse, urlunparse
 
 # Load the .env file (useful for local development)
 load_dotenv()
@@ -11,6 +12,14 @@ load_dotenv()
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def mask_password(url):
+    """Mask the password in the given URL."""
+    parsed = urlparse(url)
+    if parsed.password:
+        masked = parsed._replace(netloc=f"{parsed.username}:{'*' * 8}@{parsed.hostname}")
+        return urlunparse(masked)
+    return url
 
 # Use the DATABASE_URL provided by Coherence
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
@@ -34,23 +43,13 @@ if not SQLALCHEMY_DATABASE_URL:
 
     SQLALCHEMY_DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# Log the constructed URL (make sure to mask the password)
-if SQLALCHEMY_DATABASE_URL:
-    # Split the URL to find the password part
-    parts = SQLALCHEMY_DATABASE_URL.split('@')
-    if len(parts) > 1:
-        credentials = parts[0].split(':')
-        if len(credentials) > 2:
-            masked_password = '*' * 8
-            credentials[2] = masked_password
-            parts[0] = ':'.join(credentials)
-        masked_url = '@'.join(parts)
-    else:
-        masked_url = SQLALCHEMY_DATABASE_URL
-    logger.info(f"Database URL: {masked_url}")
-else:
-    logger.error("Database URL is not set")
-    raise ValueError("Database URL is not set")
+# Ensure the URL uses the postgresql:// scheme
+if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# Log the constructed URL (with masked password)
+masked_url = mask_password(SQLALCHEMY_DATABASE_URL)
+logger.info(f"Database URL: {masked_url}")
 
 try:
     engine = create_engine(SQLALCHEMY_DATABASE_URL)
