@@ -25,7 +25,7 @@ if not SQLALCHEMY_DATABASE_URL:
 
     # Check if all required components are available
     required_vars = ["DB_USER", "DB_PASSWORD", "DB_HOST", "DB_NAME"]
-    missing = [var for var in required_vars if not locals()[var]]
+    missing = [var for var in required_vars if not locals().get(var)]
     
     if missing:
         error_msg = f"Missing required environment variables: {', '.join(missing)}"
@@ -35,8 +35,22 @@ if not SQLALCHEMY_DATABASE_URL:
     SQLALCHEMY_DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Log the constructed URL (make sure to mask the password)
-masked_url = SQLALCHEMY_DATABASE_URL.replace(DB_PASSWORD, "********") if DB_PASSWORD else SQLALCHEMY_DATABASE_URL
-logger.info(f"Database URL: {masked_url}")
+if SQLALCHEMY_DATABASE_URL:
+    # Split the URL to find the password part
+    parts = SQLALCHEMY_DATABASE_URL.split('@')
+    if len(parts) > 1:
+        credentials = parts[0].split(':')
+        if len(credentials) > 2:
+            masked_password = '*' * 8
+            credentials[2] = masked_password
+            parts[0] = ':'.join(credentials)
+        masked_url = '@'.join(parts)
+    else:
+        masked_url = SQLALCHEMY_DATABASE_URL
+    logger.info(f"Database URL: {masked_url}")
+else:
+    logger.error("Database URL is not set")
+    raise ValueError("Database URL is not set")
 
 try:
     engine = create_engine(SQLALCHEMY_DATABASE_URL)
